@@ -1,60 +1,91 @@
-const uploadBox = document.querySelector(".upload-box"),
-previewImg = uploadBox.querySelector("img"),
-fileInput = uploadBox.querySelector("input"),
-widthInput = document.querySelector(".width input"),
-heightInput = document.querySelector(".height input"),
-ratioInput = document.querySelector(".ratio input"),
-qualityInput = document.querySelector(".quality input"),
-downloadBtn = document.querySelector(".download-btn");
+const lengthSlider = document.querySelector(".pass-length input"),
+  options = document.querySelectorAll(".option input"),
+  copyIcon = document.querySelector(".input-box span"),
+  passwordInput = document.querySelector(".input-box input"),
+  passIndicator = document.querySelector(".pass-indicator"),
+  generateBtn = document.querySelector(".generate-btn");
 
-let ogImageRatio;
+const characters = {
+  // object of letters, numbers & symbols
+  lowercase: "abcdefghijklmnopqrstuvwxyz",
+  uppercase: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+  numbers: "0123456789",
+  symbols: "^!$%&|[](){}:;.,*+-#@<>~",
+};
 
-const loadFile = (e) => {
-    const file = e.target.files[0]; // getting first user selected file
-    if(!file) return; // return if user hasn't selected any file
-    previewImg.src = URL.createObjectURL(file); // passing selected file url to preview img src
-    previewImg.addEventListener("load", () => { // once img loaded
-        widthInput.value = previewImg.naturalWidth;
-        heightInput.value = previewImg.naturalHeight;
-        ogImageRatio = previewImg.naturalWidth / previewImg.naturalHeight;
-        document.querySelector(".wrapper").classList.add("active");
-    });
-}
+const generatePassword = () => {
+  let staticPassword = "",
+    randomPassword = "",
+    excludeDuplicate = false,
+    passLength = lengthSlider.value;
 
-widthInput.addEventListener("keyup", () => {
-    // getting height according to the ratio checkbox status
-    const height = ratioInput.checked ? widthInput.value / ogImageRatio : heightInput.value;
-    heightInput.value = Math.floor(height);
-});
+  options.forEach((option) => {
+    // looping through each option's checkbox
+    if (option.checked) {
+      // if checkbox is checked
+      // if checkbox id isn't exc-duplicate && spaces
+      if (option.id !== "exc-duplicate" && option.id !== "spaces") {
+        // adding particular key value from character object to staticPassword
+        staticPassword += characters[option.id];
+      } else if (option.id === "spaces") {
+        // if checkbox id is spaces
+        staticPassword += `  ${staticPassword}  `; // adding space at the beginning & end of staticPassword
+      } else {
+        // else pass true value to excludeDuplicate
+        excludeDuplicate = true;
+      }
+    }
+  });
 
-heightInput.addEventListener("keyup", () => {
-    // getting width according to the ratio checkbox status
-    const width = ratioInput.checked ? heightInput.value * ogImageRatio : widthInput.value;
-    widthInput.value = Math.floor(width);
-});
+  for (let i = 0; i < passLength; i++) {
+    // getting random character from the static password
+    let randomChar =
+      staticPassword[Math.floor(Math.random() * staticPassword.length)];
+    if (excludeDuplicate) {
+      // if excludeDuplicate is true
+      // if randomPassword doesn't contains the current random character or randomChar is equal
+      // to space " " then add random character to randomPassword else decrement i by -1
+      !randomPassword.includes(randomChar) || randomChar == " "
+        ? (randomPassword += randomChar)
+        : i--;
+    } else {
+      // else add random character to randomPassword
+      randomPassword += randomChar;
+    }
+  }
+  passwordInput.value = randomPassword; // passing randomPassword to passwordInput value
+};
 
-const resizeAndDownload = () => {
-    const canvas = document.createElement("canvas");
-    const a = document.createElement("a");
-    const ctx = canvas.getContext("2d");
+const upadatePassIndicator = () => {
+  // if lengthSlider value is less than 8 then pass "weak" as passIndicator id else if lengthSlider
+  // value is less than 16 then pass "medium" as id else pass "strong" as id
+  passIndicator.id =
+    lengthSlider.value <= 8
+      ? "weak"
+      : lengthSlider.value <= 16
+      ? "medium"
+      : "strong";
+};
 
-    // if quality checkbox is checked, pass 0.5 to imgQuality else pass 1.0
-    // 1.0 is 100% quality where 0.5 is 50% of total. you can pass from 0.1 - 1.0
-    const imgQuality = qualityInput.checked ? 0.5 : 1.0;
+const updateSlider = () => {
+  // passing slider value as counter text
+  document.querySelector(".pass-length span").innerText = lengthSlider.value;
+  generatePassword();
+  upadatePassIndicator();
+};
+updateSlider();
 
-    // setting canvas height & width according to the input values
-    canvas.width = widthInput.value;
-    canvas.height = heightInput.value;
+const copyPassword = () => {
+  navigator.clipboard.writeText(passwordInput.value); // copying random password
+  copyIcon.innerText = "check"; // changing copy icon to tick
+  copyIcon.style.color = "#4285F4";
+  setTimeout(() => {
+    // after 1500 ms, changing tick icon back to copy
+    copyIcon.innerText = "copy_all";
+    copyIcon.style.color = "#707070";
+  }, 1500);
+};
 
-    // drawing user selected image onto the canvas
-    ctx.drawImage(previewImg, 0, 0, canvas.width, canvas.height);
-    
-    // passing canvas data url as href value of <a> element
-    a.href = canvas.toDataURL("image/jpeg", imgQuality);
-    a.download = new Date().getTime(); // passing current time as download value
-    a.click(); // clicking <a> element so the file download
-}
-
-downloadBtn.addEventListener("click", resizeAndDownload);
-fileInput.addEventListener("change", loadFile);
-uploadBox.addEventListener("click", () => fileInput.click());
+copyIcon.addEventListener("click", copyPassword);
+lengthSlider.addEventListener("input", updateSlider);
+generateBtn.addEventListener("click", generatePassword);
