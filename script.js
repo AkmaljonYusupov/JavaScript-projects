@@ -1,68 +1,91 @@
-const currentTime = document.querySelector("h1"),
-content = document.querySelector(".content"),
-selectMenu = document.querySelectorAll("select"),
-setAlarmBtn = document.querySelector("button");
+const lengthSlider = document.querySelector(".pass-length input"),
+  options = document.querySelectorAll(".option input"),
+  copyIcon = document.querySelector(".input-box span"),
+  passwordInput = document.querySelector(".input-box input"),
+  passIndicator = document.querySelector(".pass-indicator"),
+  generateBtn = document.querySelector(".generate-btn");
 
-let alarmTime, isAlarmSet,
-ringtone = new Audio("./files/ringtone.mp3");
+const characters = {
+  // object of letters, numbers & symbols
+  lowercase: "abcdefghijklmnopqrstuvwxyz",
+  uppercase: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+  numbers: "0123456789",
+  symbols: "^!$%&|[](){}:;.,*+-#@<>~",
+};
 
-for (let i = 12; i > 0; i--) {
-    i = i < 10 ? `0${i}` : i;
-    let option = `<option value="${i}">${i}</option>`;
-    selectMenu[0].firstElementChild.insertAdjacentHTML("afterend", option);
-}
+const generatePassword = () => {
+  let staticPassword = "",
+    randomPassword = "",
+    excludeDuplicate = false,
+    passLength = lengthSlider.value;
 
-for (let i = 59; i >= 0; i--) {
-    i = i < 10 ? `0${i}` : i;
-    let option = `<option value="${i}">${i}</option>`;
-    selectMenu[1].firstElementChild.insertAdjacentHTML("afterend", option);
-}
-
-for (let i = 2; i > 0; i--) {
-    let ampm = i == 1 ? "AM" : "PM";
-    let option = `<option value="${ampm}">${ampm}</option>`;
-    selectMenu[2].firstElementChild.insertAdjacentHTML("afterend", option);
-}
-
-setInterval(() => {
-    let date = new Date(),
-    h = date.getHours(),
-    m = date.getMinutes(),
-    s = date.getSeconds(),
-    ampm = "AM";
-    if(h >= 12) {
-        h = h - 12;
-        ampm = "PM";
+  options.forEach((option) => {
+    // looping through each option's checkbox
+    if (option.checked) {
+      // if checkbox is checked
+      // if checkbox id isn't exc-duplicate && spaces
+      if (option.id !== "exc-duplicate" && option.id !== "spaces") {
+        // adding particular key value from character object to staticPassword
+        staticPassword += characters[option.id];
+      } else if (option.id === "spaces") {
+        // if checkbox id is spaces
+        staticPassword += `  ${staticPassword}  `; // adding space at the beginning & end of staticPassword
+      } else {
+        // else pass true value to excludeDuplicate
+        excludeDuplicate = true;
+      }
     }
-    h = h == 0 ? h = 12 : h;
-    h = h < 10 ? "0" + h : h;
-    m = m < 10 ? "0" + m : m;
-    s = s < 10 ? "0" + s : s;
-    currentTime.innerText = `${h}:${m}:${s} ${ampm}`;
+  });
 
-    if (alarmTime === `${h}:${m} ${ampm}`) {
-        ringtone.play();
-        ringtone.loop = true;
+  for (let i = 0; i < passLength; i++) {
+    // getting random character from the static password
+    let randomChar =
+      staticPassword[Math.floor(Math.random() * staticPassword.length)];
+    if (excludeDuplicate) {
+      // if excludeDuplicate is true
+      // if randomPassword doesn't contains the current random character or randomChar is equal
+      // to space " " then add random character to randomPassword else decrement i by -1
+      !randomPassword.includes(randomChar) || randomChar == " "
+        ? (randomPassword += randomChar)
+        : i--;
+    } else {
+      // else add random character to randomPassword
+      randomPassword += randomChar;
     }
-});
+  }
+  passwordInput.value = randomPassword; // passing randomPassword to passwordInput value
+};
 
-function setAlarm() {
-    if (isAlarmSet) {
-        alarmTime = "";
-        ringtone.pause();
-        content.classList.remove("disable");
-        setAlarmBtn.innerText = "Set Alarm";
-        return isAlarmSet = false;
-    }
+const upadatePassIndicator = () => {
+  // if lengthSlider value is less than 8 then pass "weak" as passIndicator id else if lengthSlider
+  // value is less than 16 then pass "medium" as id else pass "strong" as id
+  passIndicator.id =
+    lengthSlider.value <= 8
+      ? "weak"
+      : lengthSlider.value <= 16
+      ? "medium"
+      : "strong";
+};
 
-    let time = `${selectMenu[0].value}:${selectMenu[1].value} ${selectMenu[2].value}`;
-    if (time.includes("Hour") || time.includes("Minute") || time.includes("AM/PM")) {
-        return alert("Please, select a valid time to set Alarm!");
-    }
-    alarmTime = time;
-    isAlarmSet = true;
-    content.classList.add("disable");
-    setAlarmBtn.innerText = "Clear Alarm";
-}
+const updateSlider = () => {
+  // passing slider value as counter text
+  document.querySelector(".pass-length span").innerText = lengthSlider.value;
+  generatePassword();
+  upadatePassIndicator();
+};
+updateSlider();
 
-setAlarmBtn.addEventListener("click", setAlarm);
+const copyPassword = () => {
+  navigator.clipboard.writeText(passwordInput.value); // copying random password
+  copyIcon.innerText = "check"; // changing copy icon to tick
+  copyIcon.style.color = "#4285F4";
+  setTimeout(() => {
+    // after 1500 ms, changing tick icon back to copy
+    copyIcon.innerText = "copy_all";
+    copyIcon.style.color = "#707070";
+  }, 1500);
+};
+
+copyIcon.addEventListener("click", copyPassword);
+lengthSlider.addEventListener("input", updateSlider);
+generateBtn.addEventListener("click", generatePassword);
